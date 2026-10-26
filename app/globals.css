@@ -2,19 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Zoomer-терминал: чёрный фон, тонкая неоновая сетка, крупный читаемый текст. */
+/* Zoomer-терминал: чёрный фон, тонкая неоновая сетка, крупный читаемый текст.
+   На мобилках эффекты облегчены — меньше лагов и battery drain. */
 html {
   color-scheme: dark;
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   background-color: #000000;
   color: #e8e8ee;
-  background-image:
-    linear-gradient(rgba(0, 229, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 45, 120, 0.028) 1px, transparent 1px);
-  background-size: 44px 44px;
+  /* Сетка только на desktop — на мобиле рисуется дорого и лагает */
+  background-image: none;
+}
+
+@media (min-width: 640px) {
+  body {
+    background-image:
+      linear-gradient(rgba(0, 229, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 45, 120, 0.028) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
 }
 
 ::selection {
@@ -24,9 +33,43 @@ body {
 
 .neon-frame {
   border: 1px solid #1d1d24;
-  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.06), 0 0 24px rgba(0, 229, 255, 0.07);
+  /* На мобиле лёгкая тень, без больших blur */
+  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.04);
+}
+
+@media (min-width: 640px) {
+  .neon-frame {
+    box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.06), 0 0 24px rgba(0, 229, 255, 0.07);
+  }
 }
 
 .scanline-title {
-  text-shadow: 0 0 10px rgba(0, 229, 255, 0.55), 0 0 30px rgba(255, 45, 120, 0.25);
+  /* На мобиле без тяжёлых text-shadow — меньше перерисовки */
+  text-shadow: none;
+}
+
+@media (min-width: 640px) {
+  .scanline-title {
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.55), 0 0 30px rgba(255, 45, 120, 0.25);
+  }
+}
+
+/* Крупные тач-зоны на мобиле */
+@media (max-width: 639px) {
+  a, button {
+    min-height: 44px;
+  }
+  .neon-frame {
+    padding: 1rem !important;
+  }
+}
+
+/* Плавный скролл без jank */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .scanline-title {
+    text-shadow: none !important;
+  }
 }

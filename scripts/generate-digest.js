@@ -33,7 +33,7 @@ const CATEGORIES = [
     keywords: ['рубл','доллар','евро','курс','инфляц','ставк','нефть','газ','brent','рынок','акци','бюджет','налог','зарплат','ипотек','экономи','золото','млрд'] },
 ];
 
-const ACTIVE_MOVES = (process.env.ACTIVE_MOVES || 'geopolitics,tech,crypto,incidents')
+const ACTIVE_MOVES = (process.env.ACTIVE_MOVES || 'geopolitics,tech,crypto,economy,incidents')
   .split(',').map((s) => s.trim())
   .filter((id) => CATEGORIES.some((c) => c.id === id));
 
@@ -45,14 +45,22 @@ const FEEDS = [
   { url: 'https://www.interfax.ru/rss.asp', source: 'Интерфакс' },
   { url: 'https://www.kommersant.ru/RSS/news.xml', source: 'Коммерсантъ' },
   { url: 'https://www.gazeta.ru/export/rss/first.xml', source: 'Газета.Ru' },
+  { url: 'https://www.rbc.ru/v10/ajax/get-news-feed/project/rbcnews.rss', source: 'РБК' },
+  { url: 'https://www.vedomosti.ru/rss/news', source: 'Ведомости' },
+  { url: 'https://iz.ru/xml/rss/all.xml', source: 'Известия' },
+  { url: 'https://www.mk.ru/rss/index.xml', source: 'МК' },
   { url: 'https://3dnews.ru/news/rss/', source: '3DNews' },
   { url: 'https://habr.com/ru/rss/news/?fl=ru', source: 'Habr' },
+  { url: 'https://www.cnews.ru/inc/rss/news.xml', source: 'CNews' },
   { url: 'https://cryptopotato.com/feed/', source: 'CryptoPotato', force: 'crypto' },
   { url: 'https://www.coindesk.com/arc/outboundfeeds/rss/', source: 'CoinDesk', force: 'crypto' },
   { url: 'https://bits.media/rss', source: 'Bits.media', force: 'crypto' },
+  { url: 'https://www.fontanka.ru/fontanka.rss', source: 'Фонтанка' },
 ];
 
 const BTC_API = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=rub,usd&include_24hr_change=true';
+const FX_API = 'https://api.frankfurter.app/latest?from=RUB&to=USD,EUR';
+const FX_EXTRA = 'https://open.er-api.com/v6/latest/RUB';
 
 const MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 const WEEKDAYS = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
@@ -118,10 +126,34 @@ async function fetchBtcNote() {
     if (!btc || !btc.usd) return null;
     const ch = Number(btc.usd_24h_change || 0);
     const trend = ch >= 0 ? 'растёт' : 'корректируется';
-    const tone = ch >= 0 ? 'медвежий настрой' : 'локальные продажи';
-    return `Bitcoin $${Math.round(btc.usd).toLocaleString('ru-RU')} (₽${Math.round(btc.rub).toLocaleString('ru-RU')}) за сутки ${trend} на ${Math.abs(ch).toFixed(1)}%. Аналитики ждут продолжения консолидации: ${tone}, зона поддержки ниже, сопротивление у локальных максимумов.`;
+    return `Bitcoin $${Math.round(btc.usd).toLocaleString('ru-RU')} (₽${Math.round(btc.rub).toLocaleString('ru-RU')}) за сутки ${trend} на ${Math.abs(ch).toFixed(1)}%.`;
   } catch (e) {
     console.warn('[cron] BTC price failed:', e.message);
+    return null;
+  }
+}
+
+async function fetchFxNote() {
+  try {
+    const [frank, extra] = await Promise.all([
+      Promise.race([fetch(FX_API, { signal: AbortSignal.timeout(7000) }), hardTimeout(10000)])
+        .then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      Promise.race([fetch(FX_EXTRA, { signal: AbortSignal.timeout(7000) }), hardTimeout(10000)])
+        .then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ]);
+    const parts = [];
+    if (frank && frank.rates && frank.rates.USD) parts.push(`USD ${(1 / frank.rates.USD).toFixed(2)} ₽`);
+    if (frank && frank.rates && frank.rates.EUR) parts.push(`EUR ${(1 / frank.rates.EUR).toFixed(2)} ₽`);
+    if (extra && extra.rates) {
+      if (extra.rates.USD && !(frank && frank.rates && frank.rates.USD)) parts.push(`USD ${(1 / extra.rates.USD).toFixed(2)} ₽`);
+      if (extra.rates.EUR && !(frank && frank.rates && frank.rates.EUR)) parts.push(`EUR ${(1 / extra.rates.EUR).toFixed(2)} ₽`);
+      if (extra.rates.KZT) parts.push(`KZT (тенге) ${(1 / extra.rates.KZT).toFixed(3)} ₽`);
+      if (extra.rates.UAH) parts.push(`UAH (грн) ${(1 / extra.rates.UAH).toFixed(3)} ₽`);
+    }
+    if (!parts.length) return null;
+    return `Курсы ЦБ/рынок: ${parts.join(' · ')}.`;
+  } catch (e) {
+    console.warn('[cron] FX rates failed:', e.message);
     return null;
   }
 }
@@ -146,8 +178,9 @@ function renderTemplate(slug, sections) {
   L.push(`${wd[0].toUpperCase()+wd.slice(1)}. ${intros[dd % intros.length]}`);
   L.push('');
   for (const sec of sections) {
-    const cat = CATEGORIES.find((c) => c.id === sec.category);
-    L.push(`${cat.icon} ${cat.title}`);
+    const cat = CATEGORIES.find((c) => c.id === sec.category) || { icon: '•', title: sec.category };
+    const title = sec.dynamicTitle || cat.title;
+    L.push(`${cat.icon} ${title}`);
     for (const it of sec.items) L.push(`— ${it.title}`);
     L.push('');
   }
@@ -168,9 +201,10 @@ async function main() {
   const iso = isoOf(slug);
 
   const parser = new Parser({ timeout: 10000, headers: { 'User-Agent': 'StreamLiveDailyBot/1.0 (+https://streamlive.app)' } });
-  const [rawItems, btcNote] = await Promise.all([
+  const [rawItems, btcNote, fxNote] = await Promise.all([
     Promise.all(FEEDS.map((f) => fetchFeed(parser, f.url, f.source))).then((r) => r.flat()),
     fetchBtcNote(),
+    fetchFxNote(),
   ]);
 
   // дедуп по заголовку
@@ -207,6 +241,17 @@ async function main() {
     if (btcNote) buckets.crypto.unshift({ title: btcNote, url: 'https://www.coingecko.com/en/coins/bitcoin', source: 'CoinGecko' });
     buckets.crypto = buckets.crypto.slice(0, 3);
   }
+  // Курсы валют в экономику (или в crypto, если economy не активна)
+  if (fxNote) {
+    const fxItem = { title: fxNote, url: 'https://www.cbr.ru/currency_base/daily/', source: 'FX / ЦБ' };
+    if (buckets.economy) {
+      buckets.economy.unshift(fxItem);
+      buckets.economy = buckets.economy.slice(0, 4);
+    } else if (buckets.crypto) {
+      buckets.crypto.push(fxItem);
+      buckets.crypto = buckets.crypto.slice(0, 4);
+    }
+  }
   if (buckets.tech) {
     const domtv = items.find((i) => /domtv|blyz/i.test(i.title));
     if (domtv) buckets.tech.unshift({ title: summarize(domtv.title), url: domtv.url, source: domtv.source });
@@ -216,7 +261,21 @@ async function main() {
     buckets.tech = buckets.tech.slice(0, 3);
   }
 
-  const sections = ACTIVE_MOVES.map((c) => ({ category: c, items: buckets[c] })).filter((s) => s.items.length);
+  // Если геополитика пустая — не показываем рубрику (тема «закончилась» на сегодня)
+  let moves = ACTIVE_MOVES.slice();
+  if ((!buckets.geopolitics || !buckets.geopolitics.length) && moves.includes('geopolitics')) {
+    moves = moves.filter((m) => m !== 'geopolitics');
+  }
+  const svoRe = /сво|фронт|всу|обстрел|удар|херсон|запорож|днр|лнр|курск|белгород|перемирие|мирн/i;
+  const sections = moves.map((c) => {
+    const items = buckets[c] || [];
+    const sec = { category: c, items };
+    if (c === 'geopolitics' && items.length && !items.some((i) => svoRe.test(i.title))) {
+      sec.dynamicTitle = 'Геополитика';
+    }
+    return sec;
+  }).filter((s) => s.items.length);
+
   const digest = { slug, isoDate: iso, generatedAt: new Date().toISOString(), sections, btcNote, fallbackUsed: false };
   writeDigest(digest, renderTemplate(slug, sections));
   log(`[cron] digest ${slug} published: ${sections.length} sections, ${sections.reduce((n,s)=>n+s.items.length,0)} facts`);

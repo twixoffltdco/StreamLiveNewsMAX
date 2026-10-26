@@ -14,6 +14,8 @@ import Parser from 'rss-parser';
 import {
   RSS_FEEDS,
   BTC_PRICE_API,
+  FX_RATES_API,
+  FX_EXTRA_API,
   CategoryId,
   getCategory,
   getActiveMoves,
@@ -152,7 +154,7 @@ export async function rewriteWithLLM(items: NewsItemData[]): Promise<NewsItemDat
   }
 }
 
-/* ---------------------------- 4. BTC ------------------------------ */
+/* ---------------------------- 4. BTC + FX ------------------------- */
 
 async function fetchBtcNote(): Promise<string | null> {
   try {
@@ -166,10 +168,57 @@ async function fetchBtcNote(): Promise<string | null> {
     if (!btc?.usd) return null;
     const ch = Number(btc.usd_24h_change ?? 0);
     const trend = ch >= 0 ? 'растёт' : 'корректируется';
-    const tone = ch >= 0 ? 'медвежий настрой' : 'локальные продажи';
-    return `Bitcoin $${Math.round(btc.usd).toLocaleString('ru-RU')} (₽${Math.round(btc.rub).toLocaleString('ru-RU')}) за сутки ${trend} на ${Math.abs(ch).toFixed(1)}%. Аналитики ждут продолжения консолидации: ${tone}, зона поддержки ниже, сопротивление у локальных максимумов.`;
+    return `Bitcoin $${Math.round(btc.usd).toLocaleString('ru-RU')} (₽${Math.round(btc.rub).toLocaleString('ru-RU')}) за сутки ${trend} на ${Math.abs(ch).toFixed(1)}%.`;
   } catch (e) {
     console.warn('[news-generator] BTC price fetch failed:', (e as Error).message);
+    return null;
+  }
+}
+
+/** Живые курсы: USD, EUR, KZT (тенге), UAH (гривна) к рублю. */
+async function fetchFxRatesNote(): Promise<string | null> {
+  try {
+    const [frank, extra] = await Promise.all([
+      fetch(FX_RATES_API, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(7_000) })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
+      fetch(FX_EXTRA_API, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(7_000) })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
+    ]);
+
+    const parts: string[] = [];
+    // Frankfurter отдаёт from=RUB → to=USD/EUR (сколько USD за 1 RUB). Нам нужен обратный: ₽ за 1 USD.
+    if (frank?.rates?.USD) {
+      const usdRub = 1 / frank.rates.USD;
+      parts.push(`USD ${usdRub.toFixed(2)} ₽`);
+    }
+    if (frank?.rates?.EUR) {
+      const eurRub = 1 / frank.rates.EUR;
+      parts.push(`EUR ${eurRub.toFixed(2)} ₽`);
+    }
+    // open.er-api: rates relative to RUB base → rates.USD = сколько USD за 1 RUB
+    if (extra?.rates) {
+      if (extra.rates.USD && !frank?.rates?.USD) {
+        parts.push(`USD ${(1 / extra.rates.USD).toFixed(2)} ₽`);
+      }
+      if (extra.rates.EUR && !frank?.rates?.EUR) {
+        parts.push(`EUR ${(1 / extra.rates.EUR).toFixed(2)} ₽`);
+      }
+      if (extra.rates.KZT) {
+        // 1 RUB = X KZT → 1 KZT = 1/X RUB
+        const kztRub = 1 / extra.rates.KZT;
+        parts.push(`KZT (тенге) ${kztRub.toFixed(3)} ₽`);
+      }
+      if (extra.rates.UAH) {
+        const uahRub = 1 / extra.rates.UAH;
+        parts.push(`UAH (грн) ${uahRub.toFixed(3)} ₽`);
+      }
+    }
+    if (!parts.length) return null;
+    return `Курсы ЦБ/рынок: ${parts.join(' · ')}.`;
+  } catch (e) {
+    console.warn('[news-generator] FX rates fetch failed:', (e as Error).message);
     return null;
   }
 }
@@ -203,7 +252,8 @@ function renderTemplate(d: Omit<DigestData, 'plainText'>): string {
 
   for (const sec of d.sections) {
     const cat = getCategory(sec.category);
-    lines.push(`${cat.icon} ${cat.title}`);
+    const title = sec.dynamicTitle || cat.title;
+    lines.push(`${cat.icon} ${title}`);
     for (const it of sec.items) lines.push(`— ${it.title}`);
     lines.push('');
   }
@@ -237,7 +287,11 @@ export async function generateDigest(targetDate?: Date): Promise<DigestData> {
   const now = targetDate || todayMoscow();
   const slug = toSlug(now);
 
-  const [rawItems, btcNote] = await Promise.all([fetchAllFeeds(), fetchBtcNote()]);
+  const [rawItems, btcNote, fxNote] = await Promise.all([
+    fetchAllFeeds(),
+    fetchBtcNote(),
+    fetchFxRatesNote(),
+  ]);
 
   if (rawItems.length < 5 && !btcNote) {
     console.error('[news-generator] all feeds failed → serving previous digest as fallback');
@@ -261,29 +315,75 @@ export async function generateDigest(targetDate?: Date): Promise<DigestData> {
     }
   }
 
-  // Крипта: первым делом ставим живой курс BTC, затем новости CoinDesk/Bits.media
+  // Крипта: первым делом ставим живой курс BTC
   const cryptoArr = buckets.get('crypto') || [];
-  if (btcNote) cryptoArr.unshift({ title: btcNote, url: 'https://www.coingecko.com/en/coins/bitcoin', source: 'CoinGecko' });
+  if (btcNote) {
+    cryptoArr.unshift({
+      title: btcNote,
+      url: 'https://www.coingecko.com/en/coins/bitcoin',
+      source: 'CoinGecko',
+    });
+  }
   buckets.set('crypto', cryptoArr.slice(0, 3));
 
-  // Технорубрика гарантированно подсвечивает domtv.blyz.ru / импортозамещение,
-  // если в потоке нашлись релевантные факты; иначе берём топ IT-новостей.
+  // Экономика: курсы валют (USD/EUR/KZT/UAH) в начало рубрики
+  const economyArr = buckets.get('economy') || [];
+  if (fxNote) {
+    economyArr.unshift({
+      title: fxNote,
+      url: 'https://www.cbr.ru/currency_base/daily/',
+      source: 'FX / ЦБ',
+    });
+  }
+  // Если economy не в ACTIVE_MOVES — всё равно покажем курсы в crypto/geopolitics fallback не нужен:
+  // курсы важны, поэтому если economy пуст и не активен — добавим в crypto
+  if (fxNote && !getActiveMoves().includes('economy') && economyArr.length === 0) {
+    const c = buckets.get('crypto') || [];
+    if (!c.some((i) => i.title.startsWith('Курсы'))) {
+      c.push({ title: fxNote, url: 'https://www.cbr.ru/currency_base/daily/', source: 'FX / ЦБ' });
+      buckets.set('crypto', c.slice(0, 4));
+    }
+  } else {
+    buckets.set('economy', economyArr.slice(0, 4));
+  }
+
+  // Технорубрика: domtv.blyz.ru / импортозамещение
   const techArr = buckets.get('tech') || [];
   const domtv = rawItems.find((i) => /domtv|blyz/i.test(i.title));
   if (domtv) {
     techArr.unshift({ title: summarize(domtv.title), url: domtv.url, source: domtv.source });
   } else if (!techArr.some((t) => /domtv\.blyz\.ru/i.test(t.title))) {
     techArr.unshift({
-      title: 'domtv.blyz.ru продолжает раздавать прямой эфир телеканалов без buffering-пауз — инфраструктура выдержала пиковые нагрузки дня.',
+      title:
+        'domtv.blyz.ru продолжает раздавать прямой эфир телеканалов без buffering-пауз — инфраструктура выдержала пиковые нагрузки дня.',
       url: 'https://domtv.blyz.ru',
       source: 'StreamLive',
     });
   }
   buckets.set('tech', techArr.slice(0, 3));
 
-  const sections: DigestSectionData[] = getActiveMoves()
-    .map((cat) => ({ category: cat, items: buckets.get(cat) || [] }))
-    .filter((s) => s.items.length > 0);
+  // Умный «движ»: если по геополитике почти нет фактов про СВО/фронт —
+  // рубрика всё равно публикуется, но заголовок станет нейтральным «Геополитика».
+  // Полная смена ACTIVE_MOVES — через .env (или авто, если геополитика пустая несколько дней подряд).
+  let moves = getActiveMoves();
+  const geoItems = buckets.get('geopolitics') || [];
+  const svoKeywords = /сво|фронт|всу|обстрел|удар|херсон|запорож|днр|лнр|курск|белгород|перемирие|мирн/i;
+  const hasSvo = geoItems.some((i) => svoKeywords.test(i.title));
+  if (geoItems.length === 0 && moves.includes('geopolitics')) {
+    // тема исчерпана сегодня — не показываем пустую рубрику, остальные остаются
+    moves = moves.filter((m) => m !== 'geopolitics');
+  }
+
+  const sections: DigestSectionData[] = moves
+    .map((cat) => {
+      const items = buckets.get(cat) || [];
+      // динамический title для geopolitics
+      if (cat === 'geopolitics' && items.length && !hasSvo) {
+        return { category: cat, items, dynamicTitle: 'Геополитика' as string };
+      }
+      return { category: cat, items };
+    })
+    .filter((s) => s.items.length > 0) as DigestSectionData[];
 
   const base: Omit<DigestData, 'plainText'> = {
     slug,

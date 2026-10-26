@@ -16,11 +16,11 @@ export const metadata: Metadata = {
 };
 
 const MOVES = [
-  { href: '/category/geopolitics', label: '🛰️ СВО и геополитика', hint: 'главный движ сегодня' },
-  { href: '/category/tech', label: '💻 IT и обход блокировок', hint: 'софт, стриминг, импортозамещение' },
-  { href: '/category/crypto', label: '₿ Крипта и биткоин', hint: 'курсы и прогнозы' },
+  { href: '/category/geopolitics', label: '🛰️ Геополитика', hint: 'СВО, переговоры, международка — авто-адаптация' },
+  { href: '/category/tech', label: '💻 IT и стриминг', hint: 'софт, импортозамещение, domtv' },
+  { href: '/category/crypto', label: '₿ Крипта', hint: 'BTC и альты' },
+  { href: '/category/economy', label: '📈 Курсы и экономика', hint: 'USD EUR KZT UAH, рубль, нефть' },
   { href: '/category/incidents', label: '🚨 ЧП и МЧС', hint: 'происшествия и погода' },
-  { href: '/category/economy', label: '📈 Экономика', hint: 'рубль, нефть, ставки' },
 ];
 
 export default function HomePage() {

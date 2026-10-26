@@ -58,7 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ru">
       <body className="min-h-screen font-mono antialiased">
         <Header />
-        <main className="mx-auto w-full max-w-3xl px-4 pb-16">{children}</main>
+        <main className="mx-auto w-full max-w-3xl px-3 pb-12 sm:px-4 sm:pb-16">{children}</main>
         <Footer />
       </body>
     </html>
@@ -67,30 +67,30 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 function Header() {
   return (
-    <header className="mx-auto mb-8 flex w-full max-w-3xl items-center justify-between px-4 py-5">
-      <a href="/" className="flex items-baseline gap-2 no-underline">
-        <span className="scanline-title text-xl font-bold tracking-tight text-neon-cyan">
+    <header className="mx-auto mb-5 flex w-full max-w-3xl items-center justify-between gap-2 px-3 py-4 sm:mb-8 sm:px-4 sm:py-5">
+      <a href="/" className="flex shrink-0 items-baseline gap-1.5 no-underline sm:gap-2">
+        <span className="scanline-title text-lg font-bold tracking-tight text-neon-cyan sm:text-xl">
           ⚡ StreamLive
         </span>
-        <span className="text-sm text-neon-pink">в Max</span>
+        <span className="text-xs text-neon-pink sm:text-sm">в Max</span>
       </a>
-      <nav className="flex items-center gap-3 text-sm">
-        <a href="/news" className="hidden text-gray-300 hover:text-neon-cyan sm:inline">Дайджесты</a>
-        <a href="/news/today" className="text-gray-300 hover:text-neon-cyan">Сегодня</a>
+      <nav className="flex flex-wrap items-center justify-end gap-1.5 text-xs sm:gap-3 sm:text-sm">
+        <a href="/news" className="hidden text-gray-300 hover:text-neon-cyan sm:inline">Архив</a>
+        <a href="/news/today" className="rounded-md px-2 py-1.5 text-gray-300 hover:text-neon-cyan">Сегодня</a>
         <a
           href={SITE.telegram}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-md border border-neon-cyan/40 bg-neon-cyan/10 px-3 py-1.5 font-semibold text-neon-cyan shadow-neon hover:bg-neon-cyan/20"
+          className="min-h-[36px] rounded-md border border-neon-cyan/40 bg-neon-cyan/10 px-2.5 py-1.5 font-semibold text-neon-cyan hover:bg-neon-cyan/20 sm:px-3 sm:shadow-neon"
           aria-label="Подписаться на Telegram-канал StreamLive в Max"
         >
-          ✈️ Telegram
+          ✈️ <span className="hidden xs:inline sm:inline">TG</span>
         </a>
         <a
           href={SITE.max}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-md border border-neon-pink/40 bg-neon-pink/10 px-3 py-1.5 font-semibold text-neon-pink hover:bg-neon-pink/20"
+          className="min-h-[36px] rounded-md border border-neon-pink/40 bg-neon-pink/10 px-2.5 py-1.5 font-semibold text-neon-pink hover:bg-neon-pink/20 sm:px-3"
           aria-label="Читать StreamLive в MAX"
         >
           🟣 MAX
@@ -99,7 +99,7 @@ function Header() {
           href={SITE.vk}
           target="_blank"
           rel="noopener noreferrer"
-          className="hidden rounded-md border border-neon-blue/40 bg-neon-blue/10 px-3 py-1.5 font-semibold text-neon-blue hover:bg-neon-blue/20 sm:inline-block"
+          className="hidden min-h-[36px] rounded-md border border-neon-blue/40 bg-neon-blue/10 px-2.5 py-1.5 font-semibold text-neon-blue hover:bg-neon-blue/20 sm:inline-block sm:px-3"
           aria-label="Подписаться на StreamLive во ВКонтакте"
         >
           🔷 VK
@@ -115,8 +115,9 @@ function Footer() {
       <div className="mx-auto max-w-3xl px-4 py-8 text-xs leading-relaxed text-gray-500">
         <p>
           © {new Date().getFullYear()} {SITE.name}. Автоматическая редакция: RSS открытых
-          источников (Lenta.ru, РБК, ТАСС, РИА, Интерфакс, 3DNews, Habr, CoinDesk, Bits.media) +
-          живой курс BTC (CoinGecko). Публикации: 08:00, 14:00, 20:00 МСК.
+          источников (Lenta.ru, ТАСС, РИА, Интерфакс, Коммерсантъ, РБК, Ведомости, Известия, МК,
+          3DNews, Habr, CNews, CoinDesk, Bits.media и др.) + живые курсы BTC (CoinGecko) и
+          USD/EUR/KZT/UAH. Публикации: 08:00, 14:00, 20:00 МСК. Архив с апреля 2026.
         </p>
         <p className="mt-2">
           <a href="/news" className="hover:text-neon-cyan">Архив</a> ·{' '}

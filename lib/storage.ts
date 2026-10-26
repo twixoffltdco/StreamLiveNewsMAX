@@ -19,6 +19,8 @@ export interface NewsItemData {
 export interface DigestSectionData {
   category: CategoryId;
   items: NewsItemData[];
+  /** Если задан — переопределяет title из config (напр. «Геополитика» вместо «Геополитика и СВО»). */
+  dynamicTitle?: string;
 }
 
 export interface DigestData {

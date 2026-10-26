@@ -33,10 +33,11 @@ export const ALL_CATEGORIES: CategoryDef[] = [
     accent: 'text-neon-pink',
     keywords: [
       'сво', 'специальная военная операция', 'фронт', 'всу', 'нато', 'санкц',
-      'переговор', 'минск', 'киев', 'москва', 'кретинль/кремль', 'кремль',
-      'белгород', 'курск', 'днр', 'лнр', 'запорожье', 'херсон', 'турецк',
-      'китай', 'сша', 'трамп', 'биден', 'зеленск', 'путин', 'лавров', 'войск',
-      'удар', 'обстрел', 'пзо', 'безопасность евросоюз', 'госдума',
+      'переговор', 'минск', 'киев', 'москва', 'кремль', 'белгород', 'курск',
+      'днр', 'лнр', 'запорожье', 'херсон', 'турецк', 'китай', 'сша', 'трамп',
+      'биден', 'зеленск', 'путин', 'лавров', 'войск', 'удар', 'обстрел', 'пзо',
+      'безопасность евросоюз', 'госдума', 'мирный договор', 'перемирие',
+      'демилитаризац', 'деэскалац', 'конфликт', 'война', 'переговорн процесс',
     ],
   },
   {
@@ -82,10 +83,10 @@ export const ALL_CATEGORIES: CategoryDef[] = [
     icon: '📈',
     accent: 'text-neon-violet',
     keywords: [
-      'рубл', 'доллар', 'евро', 'юань', 'курс', 'инфляц', 'ставк', 'цб ',
-      'банк росс', 'нефть', 'gas', 'газ', 'брен', 'wto', 'оpec', 'рынок',
-      'акци', 'бюджет', 'налог', 'зарплат', 'ипотек', 'цен', 'экономи',
-      'золото', 'млн', 'млрд',
+      'рубл', 'доллар', 'евро', 'юань', 'тенге', 'гривн', 'курс', 'инфляц',
+      'ставк', 'цб ', 'банк росс', 'нефть', 'gas', 'газ', 'брен', 'wto', 'оpec',
+      'рынок', 'акци', 'бюджет', 'налог', 'зарплат', 'ипотек', 'цен', 'экономи',
+      'золото', 'млн', 'млрд', 'цб рф', 'ключевая ставка',
     ],
   },
   {
@@ -108,7 +109,8 @@ export const ALL_CATEGORIES: CategoryDef[] = [
  *   ACTIVE_MOVES=economy,tech,crypto,incidents
  */
 export function getActiveMoves(): CategoryId[] {
-  const fallback: CategoryId[] = ['geopolitics', 'tech', 'crypto', 'incidents'];
+  // economy добавлена по умолчанию — чтобы всегда были курсы USD/EUR/KZT/UAH
+  const fallback: CategoryId[] = ['geopolitics', 'tech', 'crypto', 'economy', 'incidents'];
   const raw = process.env.ACTIVE_MOVES;
   if (!raw) return fallback;
   const parsed = raw
@@ -136,7 +138,7 @@ export interface FeedDef {
 }
 
 export const RSS_FEEDS: FeedDef[] = [
-  // Проверены на доступность (2026-10). Упавший фид не ломает сводку —
+  // Проверены на доступность. Упавший фид не ломает сводку —
   // fetchFeed() возвращает [] и генератор продолжает с остальными.
   // Главные российские ленты: политика, экономика, ЧП
   { url: 'https://lenta.ru/rss/news', source: 'Lenta.ru' },
@@ -145,19 +147,30 @@ export const RSS_FEEDS: FeedDef[] = [
   { url: 'https://www.interfax.ru/rss.asp', source: 'Интерфакс' },
   { url: 'https://www.kommersant.ru/RSS/news.xml', source: 'Коммерсантъ' },
   { url: 'https://www.gazeta.ru/export/rss/first.xml', source: 'Газета.Ru' },
+  { url: 'https://www.rbc.ru/v10/ajax/get-news-feed/project/rbcnews.rss', source: 'РБК' },
+  { url: 'https://www.vedomosti.ru/rss/news', source: 'Ведомости' },
+  { url: 'https://iz.ru/xml/rss/all.xml', source: 'Известия' },
+  { url: 'https://www.mk.ru/rss/index.xml', source: 'МК' },
   // Технологии / импортозамещение / софт
   { url: 'https://3dnews.ru/news/rss/', source: '3DNews' },
   { url: 'https://habr.com/ru/rss/news/?fl=ru', source: 'Habr' },
+  { url: 'https://www.cnews.ru/inc/rss/news.xml', source: 'CNews' },
   // Крипта — курсы и аналитика
   { url: 'https://cryptopotato.com/feed/', source: 'CryptoPotato', forceCategory: 'crypto' },
-  // Резервные крипто-ленты (CoinDesk/Bits.media могут отдавать 403 из дата-центров):
   { url: 'https://www.coindesk.com/arc/outboundfeeds/rss/', source: 'CoinDesk', forceCategory: 'crypto' },
   { url: 'https://bits.media/rss', source: 'Bits.media', forceCategory: 'crypto' },
+  // Международка / резерв
+  { url: 'https://www.fontanka.ru/fontanka.rss', source: 'Фонтанка' },
 ];
 
 /** Живой курс BTC (JSON-API CoinGecko) — реальные цифры, не мок. */
 export const BTC_PRICE_API =
   'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=rub,usd&include_24hr_change=true';
+
+/** Курсы валют: USD, EUR, KZT, UAH к рублю (Frankfurter / ECB + fallback). */
+export const FX_RATES_API = 'https://api.frankfurter.app/latest?from=RUB&to=USD,EUR';
+/** Дополнительно тенге и гривна через open.er-api (бесплатно, без ключа). */
+export const FX_EXTRA_API = 'https://open.er-api.com/v6/latest/RUB';
 
 export const SITE = {
   name: 'StreamLive Daily',
