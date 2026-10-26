@@ -12,24 +12,43 @@ export const metadata: Metadata = {
     'Полный архив ежедневных дайджестов «Главные факты дня»: геополитика, технологии, криптовалюты, ЧП. Каждый выпуск — отдельная страница для быстрого поиска.',
 };
 
+/** ISO-дата из slug «ДД-ММММ-ГГГГ». */
+function slugToIso(slug: string): string | null {
+  const p = parseSlugDate(slug);
+  if (!p) return null;
+  return `${p.yyyy}-${String(p.mm).padStart(2, '0')}-${String(p.dd).padStart(2, '0')}`;
+}
+
 export default function NewsArchivePage() {
-  // Архив с апреля 2026 — даты раньше апреля не показываем (начало постинга сводок)
-  const APRIL_2026 = '2026-04-01';
+  // Нижняя граница архива: показываем сводки не дальше этой даты (см. ARCHIVE_FROM_ISO).
+  // Ограничение нужно, чтобы страница архива не разрасталась бесконечно.
   const slugs = listDigestSlugs()
     .filter((slug) => {
-      const p = parseSlugDate(slug);
-      if (!p) return false;
-      const iso = `${p.yyyy}-${String(p.mm).padStart(2, '0')}-${String(p.dd).padStart(2, '0')}`;
-      return iso >= APRIL_2026;
+      const iso = slugToIso(slug);
+      if (!iso) return false;
+      return iso >= ARCHIVE_FROM_ISO;
     })
     .reverse(); // свежие сверху
+
+  const earliestIso = slugs.length ? slugToIso(slugs[slugs.length - 1]) : null;
+  const earliestLabel = earliestIso
+    ? humanDate(parseSlugDate(`${earliestIso.slice(8, 10)}-${earliestIso.slice(5, 7)}-${earliestIso.slice(0, 4)}`)!)
+    : null;
+  const hasEarlier = listDigestSlugs().some((s) => {
+    const iso = slugToIso(s);
+    return !!iso && iso < ARCHIVE_FROM_ISO;
+  });
+
   return (
     <div>
       <h1 className="scanline-title mb-2 text-xl font-extrabold text-white sm:mb-6 sm:text-2xl">
         🗂 Архив выпусков
       </h1>
       <p className="mb-5 text-sm text-gray-400">
-        Сводки StreamLive в Max с апреля 2026 года. Обновление 3 раза в день.
+        {earliestLabel
+          ? `Сводки StreamLive в Max c ${earliestLabel} года.`
+          : 'Сводки StreamLive в Max.'}{' '}
+        Обновление 3 раза в день.
       </p>
       <ul className="space-y-2.5 sm:space-y-3">
         {slugs.map((slug) => {
