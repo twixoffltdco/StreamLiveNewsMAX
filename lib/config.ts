@@ -102,29 +102,20 @@ export const ALL_CATEGORIES: CategoryDef[] = [
 
 /**
  * Активный «движ» — какие рубрики публикуются в сводке и в каком порядке.
- *
- * ВАЖНО: состав движков ФИКСИРОВАН владельцем сайта и НЕ меняется автоматически.
- * Никакой самоподстройки под новости нет — сводка всегда идёт строго по списку ниже.
- * Чтобы сменить движ (например, когда СВО закончится), владелец вручную редактирует
- * массив DEFAULT_MOVES (или ACTIVE_MOVES в .env, если он задан явно).
+ * По умолчанию: геополитика → технологии → крипта → ЧП (как в ТЗ).
+ * Меняется через переменную окружения ACTIVE_MOVES через запятую.
+ * Когда СВО закончится — просто поменяйте строку в .env на, например:
+ *   ACTIVE_MOVES=economy,tech,crypto,incidents
  */
-const DEFAULT_MOVES: CategoryId[] = [
-  'geopolitics', // ГЛАВНЫЙ ДВИЖ: Геополитика и СВО
-  'tech',        // StreamLife и Технологии
-  'crypto',      // Криптовалюты
-  'incidents',   // Безопасность и ЧП
-];
-
-// Если в .env прописан ACTIVE_MOVES — используем его (только ручная смена владельцем).
-// Если нет — всегда фиксированный список выше. Автоматической ротации не существует.
 export function getActiveMoves(): CategoryId[] {
+  const fallback: CategoryId[] = ['geopolitics', 'tech', 'crypto', 'incidents'];
   const raw = process.env.ACTIVE_MOVES;
-  if (!raw) return DEFAULT_MOVES;
+  if (!raw) return fallback;
   const parsed = raw
     .split(',')
     .map((s) => s.trim())
     .filter((s): s is CategoryId => ALL_CATEGORIES.some((c) => c.id === s));
-  return parsed.length ? parsed : DEFAULT_MOVES;
+  return parsed.length ? parsed : fallback;
 }
 
 export function getCategory(id: CategoryId): CategoryDef {

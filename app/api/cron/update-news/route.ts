@@ -14,17 +14,38 @@ import path from 'path';
  *     заголовке Authorization: Bearer <CRON_SECRET>).
  *  2. Запускает standalone-генератор сводки (реальный парсинг RSS).
  *  3. Пересобирает sitemap.xml через next-sitemap.
- *  4. НИКАКИХ ручных регистраций не требуется: роботы Яндекса и Google сами
- *     обходят сайт по sitemap.xml, который подключается автоматически через
- *     robots.txt (строка Sitemap:) — ничего подтверждать в Вебмастере /
- *     Search Console НЕ нужно.
- *
- * Состав «движей» сводки фиксирован (lib/config.ts → DEFAULT_MOVES) и никогда
- * не меняется автоматически — только вручную владельцем.
+ *  4. Пингует поисковые системы (Яндекс ping + Google Indexing API/Sitemap ping),
+ *     чтобы новая страница проиндексировалась мгновенно.
  */
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Vercel:cron-функции до 60 сек
+
+async function pingSearchEngines(siteUrl: string): Promise<string[]> {
+  const results: string[] = [];
+  const sitemap = `${siteUrl}/sitemap.xml`;
+  try {
+    // Яндекс: переобход sitemap по API (нужен YANDEX_WEBMASTER_TOKEN из Яндекс.Webmaster)
+    if (process.env.YANDEX_WEBMASTER_TOKEN) {
+      const r = await fetch(
+        `https://webmaster.yandex.ru/v3/sitemap/?text=${encodeURIComponent(sitemap)}&host=${encodeURIComponent(siteUrl)}&token=${process.env.YANDEX_WEBMASTER_TOKEN}`,
+        { method: 'POST' },
+      );
+      results.push(`yandex:${r.status}`);
+    } else {
+      results.push('yandex:skipped(no-token)');
+    }
+    // Google: классический ping-хук карты сайта
+    const g = await fetch(
+      `https://www.google.com/ping?sitemap=${encodeURIComponent(sitemap)}`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+    results.push(`google:${g.status}`);
+  } catch (e) {
+    results.push(`ping-error:${(e as Error).message}`);
+  }
+  return results;
+}
 
 export async function GET(req: NextRequest) {
   return handle(req);
@@ -46,17 +67,13 @@ async function handle(req: NextRequest) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://streamlive.app';
 
   try {
-    // 2. Генерация свежей сводки (тот же код, что и npm run generate).
-    //    Рубрики («движи») берутся из фиксированного списка lib/config.ts —
-    //    автоматической смены состава не происходит никогда.
+    // 2. Генерация свежей сводки (тот же код, что и npm run generate)
     execFileSync(process.execPath, [path.join(process.cwd(), 'scripts', 'generate-digest.js'), '--quiet'], {
       stdio: 'pipe',
       timeout: 50_000,
     });
 
-    // 3. Обновление sitemap.xml — новые страницы сразу в карте.
-    //    Роботы Яндекса и Google сами найдут её через robots.txt (Sitemap:),
-    //    регистрация в Вебмастере/Search Console НЕ требуется.
+    // 3. Обновление sitemap.xml — новые страницы сразу в карте
     try {
       execFileSync(path.join(process.cwd(), 'node_modules', '.bin', 'next-sitemap'), [], {
         cwd: process.cwd(),
@@ -67,12 +84,14 @@ async function handle(req: NextRequest) {
       console.warn('[cron] next-sitemap regen failed:', (e as Error).message);
     }
 
+    // 4. Пинг Яндекса и Google для мгновенной индексации
+    const pings = await pingSearchEngines(siteUrl);
+
     return NextResponse.json({
       ok: true,
       ranAt: new Date().toISOString(),
       timezone: 'MSK schedule 08:00 / 14:00 / 20:00',
-      moves: 'fixed (geopolitics, tech, crypto, incidents) — manual change only',
-      siteUrl,
+      pings,
     });
   } catch (e) {
     console.error('[cron] update-news failed:', e);

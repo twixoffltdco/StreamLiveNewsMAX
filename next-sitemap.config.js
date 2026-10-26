@@ -44,8 +44,6 @@ module.exports = {
     return [...staticPaths, ...newsPaths];
   },
   robotsTxtOptions: {
-    // ВАЖНО: строка "Sitemap: ..." в robots.txt — Яндекс и Google сами её
-    // считывают и обходят карту БЕЗ регистрации в Вебмастере/Search Console.
     policies: [
       {
         userAgent: '*',
