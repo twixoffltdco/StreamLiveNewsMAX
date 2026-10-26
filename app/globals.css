@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Zoomer-терминал: чёрный фон, тонкая неоновая сетка, крупный читаемый текст. */
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #000000;
+  color: #e8e8ee;
+  background-image:
+    linear-gradient(rgba(0, 229, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 45, 120, 0.028) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+::selection {
+  background: rgba(0, 229, 255, 0.35);
+  color: #fff;
+}
+
+.neon-frame {
+  border: 1px solid #1d1d24;
+  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.06), 0 0 24px rgba(0, 229, 255, 0.07);
+}
+
+.scanline-title {
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.55), 0 0 30px rgba(255, 45, 120, 0.25);
+}
