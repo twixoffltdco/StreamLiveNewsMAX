@@ -1,6 +1,6 @@
 # ⚡ StreamLive Daily — «StreamLive в Max»
 
-**Автоматизированный новостной дайджест на Next.js 14 (App Router).** Каждый день в **08:00, 14:00 и 20:00 МСК** сайт сам парсит RSS открытых источников, собирает сводку «ГЛАВНЫЕ ФАКТЫ ДНЯ» в строгом шаблоне без воды, публикует SEO-страницу `/news/[ДД-ММММ-ГГГГ]`, обновляет `sitemap.xml` и пингует Яндекс/Google для мгновенной индексации.
+**Автоматизированный новостной дайджест на Next.js 14 (App Router).** Каждый день в **08:00, 14:00 и 20:00 МСК** сайт сам парсит RSS открытых источников, собирает сводку «ГЛАВНЫЕ ФАКТЫ ДНЯ» в строгом шаблоне без воды, публикует SEO-страницу `/news/[ДД-ММММ-ГГГГ]` и обновляет `sitemap.xml`. Роботы Яндекса и Google сами находят карту через robots.txt — **регистрация в Яндекс.Вебмастере и Google Search Console НЕ требуется**.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![Next.js 14](https://img.shields.io/badge/Next.js-14%20App%20Router-black?logo=nextdotjs)
@@ -21,7 +21,7 @@
 | ⏰ **Cron 3×/день** | Vercel Cron (`vercel.json`) или node-cron демон (`npm run cron`): 08:00 / 14:00 / 20:00 МСК. |
 | 🔍 **SEO-архитектура** | SSG-страницы дат, `next-sitemap` (+авто-регенерация после каждого выпуска), canonical, OpenGraph/VK/Telegram-превью, Twitter Cards, JSON-LD `NewsArticle`, собственный `rss.xml`, кластерная перелинковка. |
 | 🛟 **Отказоустойчивость** | Упал один фид — остальные вытянули; упали все — страница показывает вчерашнюю сводку с плашкой ⚠️. |
-| 🎛 **«Движи»** | Рубрики вынесены в конфиг: сегодня движ — СВО, завтра меняете `ACTIVE_MOVES=economy,tech,crypto,incidents` в `.env` — и сайт перестраивается без правки кода. Кнопки «🔎 Важное: СВО / IT / Крипта / ЧП / Экономика» ведут на страницы рубрик `/category/*`. |
+| 🎛 **«Движи»** | Состав рубрик сводки **ФИКСИРОВАН владельцем и никогда не меняется автоматически**. Сегодня движ — СВО, и он останется до тех пор, пока владелец вручную не отредактирует `DEFAULT_MOVES` в `lib/config.ts` (или явно задаст `ACTIVE_MOVES` в `.env`). Никакой самоподстройки под новости нет. Кнопки «🔎 Важное: СВО / IT / Крипта / ЧП / Экономика» ведут на страницы рубрик `/category/*`. |
 | 🎨 **Zoomer 2026 UI** | Чистый чёрный `#000000`, неон cyan/pink, моноширинный «терминальный» стиль — но крупно, контрастно и понятно **всем возрастам**. |
 | ✈️ **Подписка** | Три CTA-кнопки на каждой странице: [t.me/streamliveru](https://t.me/streamliveru), [max.ru/channel_StreamLive](https://max.ru/channel_StreamLive), [vk.com/streamliveru](https://vk.com/streamliveru) — шапка, подвал, карточка выпуска, архив и рубрики. |
 
@@ -54,7 +54,7 @@ GET /api/cron/update-news  (Bearer CRON_SECRET)
         ├─▶ scripts/generate-digest.js — парсинг RSS → классификация → шаблон
         │        └─▶ content/news/YYYY-MM-DD.md + .json
         ├─▶ next-sitemap — новые страницы моментально в sitemap.xml
-        └─▶ ping Яндекса (Webmaster API) и Google (sitemap ping) → быстрая индексация
+        └─▶ sitemap.xml обновлён → роботы Яндекса/Google обходят его сами (Вебмастер/Search Console не нужны)
 ```
 
 * Self-hosted альтернатива: `npm run cron` (node-cron демон).
@@ -71,10 +71,10 @@ app/
 │   ├── today/page.tsx           # канонический «сегодня» (force-dynamic)
 │   └── [date]/page.tsx          # Динамическая SEO-страница 26-10-2026 + JSON-LD
 ├── category/[slug]/page.tsx     # страницы рубрик (СВО, IT, крипта, ЧП, экономика)
-├── api/cron/update-news/route.ts# cron-роут: генерация + sitemap + пинги
+├── api/cron/update-news/route.ts# cron-роут: генерация + обновление sitemap
 └── rss.xml/route.ts             # собственный RSS дайджестов
 lib/
-├── config.ts                    # RSS-ленты, категории-«движи», SITE
+├── config.ts                    # RSS-ленты, ФИКСИРОВАННЫЕ «движи» (DEFAULT_MOVES), SITE
 ├── news-generator.ts            # парсинг → классификация → суммаризация → шаблон
 ├── storage.ts                   # файловая база content/news/*.md|*.json
 └── dates.ts                     # формат дат ДД-ММММ-ГГГГ (МСК)
@@ -96,7 +96,7 @@ vercel.json                      # Vercel Cron: 08/14/20 МСК
 | `NEXT_PUBLIC_TELEGRAM_URL` | https://t.me/streamliveru | Telegram-канал «StreamLive в Max» |
 | `NEXT_PUBLIC_MAX_URL` | https://max.ru/channel_StreamLive | Канал в национальном мессенджере MAX |
 | `NEXT_PUBLIC_VK_URL` | https://vk.com/streamliveru | Группа ВКонтакте |
-| `ACTIVE_MOVES` | — | Состав движков: `geopolitics,tech,crypto,incidents[,economy,sport]` |
+| `ACTIVE_MOVES` | *(не задана)* | Не нужна. Без неё берётся жёсткий список `DEFAULT_MOVES` из `lib/config.ts`; менять состав — только вручную |
 | `OPENAI_API_KEY` / `GIGACHAT_API_KEY` | — | Хук рерайта фактов LLM в фирменный стиль (без ключа — эвристический суммаризатор) |
 | `YANDEX_WEBMASTER_TOKEN` | — | Мгновенный переобход sitemap в Яндексе |
 
@@ -110,7 +110,7 @@ vercel.json                      # Vercel Cron: 08/14/20 МСК
 - [x] Собственный RSS-фид `/rss.xml` + `googleNews.indexable`
 - [x] Пинг поисковых систем после каждого cron-выпуска
 - [x] Кластерная перелинковка: день↔день, архив, рубрики
-- ⚠️ Замените домен-заглушку `streamlive.app` на боевой и подтвердите его в Яндекс.Вебмастере и Search Console.
+- ✅ Домен-заглушку `streamlive.app` замените на боевой в `NEXT_PUBLIC_SITE_URL`. Подтверждать сайт в Яндекс.Вебмастере / Google Search Console **не нужно**: `robots.txt` автоматически содержит строку `Sitemap: .../sitemap.xml`, и поисковые роботы индексируют новые выпуски сами.
 
 ## 🧪 Проверено
 
@@ -118,7 +118,7 @@ vercel.json                      # Vercel Cron: 08/14/20 МСК
 $ npm run generate
 [cron] digest 27-10-2026 published: 4 sections, 11 facts   # реальные новости
 $ curl -s localhost:3000/api/cron/update-news -H "Authorization: Bearer $CRON_SECRET"
-{"ok":true,"pings":["yandex:skipped(no-token)","google:200"]}
+{"ok":true,"ranAt":"2026-10-27T11:00:00.000Z","moves":"fixed (geopolitics, tech, crypto, incidents) — manual change only"}
 ```
 
 Fallback проверен: запрос даты без файла отдаёт предыдущую сводку с плашкой «показана последняя сводка».

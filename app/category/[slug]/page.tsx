@@ -70,8 +70,8 @@ export default function CategoryPage({ params }: Props) {
         {cat.icon} {TITLES[cat.id]}
       </h1>
       <p className="mb-6 text-sm text-gray-400">
-        Лента важного по движку «{TITLES[cat.id]}» из всех свежих выпусков. Когда главный тема-движ
-        меняется, здесь автоматически оказывается новый фокус — настройте ACTIVE_MOVES.
+        Лента важного по движку «{TITLES[cat.id]}» из всех свежих выпусков. Состав рубрик сводки
+        фиксирован владельцем StreamLive и меняется только вручную — ничего не подстраивается само.
       </p>
 
       {facts.length ? (
