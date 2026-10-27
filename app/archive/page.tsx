@@ -21,8 +21,15 @@ export const metadata: Metadata = {
 };
 
 export default function ArchivePage() {
+  // Защита от 500: при недоступной БД показываем заглушку, а не «Application error».
+  let all: ReturnType<typeof getAllDigests> = [];
+  try {
+    all = getAllDigests();
+  } catch (e) {
+    console.error('[archive] getAllDigests failed:', e);
+  }
   // Фильтр «с апреля 2026» — на случай, если в БД затесались более ранние тестовые записи.
-  const digests = getAllDigests().filter((d) => d.date >= ARCHIVE_START);
+  const digests = all.filter((d) => d.date >= ARCHIVE_START);
 
   let lastMonth = '';
 
