@@ -175,7 +175,7 @@ export const FX_EXTRA_API = 'https://open.er-api.com/v6/latest/RUB';
 export const SITE = {
   name: 'StreamLive Daily',
   brand: 'StreamLive в Max',
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://streamlive.app',
+  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://streamlive.tatnet.app',
   // Официальные площадки «StreamLive в Max» — везде ведут на подписку.
   telegram: process.env.NEXT_PUBLIC_TELEGRAM_URL || 'https://t.me/streamliveru',
   max: process.env.NEXT_PUBLIC_MAX_URL || 'https://max.ru/channel_StreamLive',
