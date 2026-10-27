@@ -1,53 +1,48 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { SITE } from '@/lib/config';
 
 /**
- * Глобальные мета-теги StreamLive Daily.
- * OpenGraph + Twitter Card настроены так, чтобы сводки красиво разворачивались
- * в превью Telegram и VK (картинка og.png обязательна — лежит в /public).
+ * app/layout.tsx — корневой layout «StreamLive в Max».
+ * Zoomer 2026: чёрный фон, неон #00f2ea / #fe2c55, mobile-first.
  */
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://streamlive-max.ru';
+
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE.url),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: `${SITE.name} — ${SITE.brand}: главные факты дня без воды`,
-    template: `%s | ${SITE.brand}`,
+    default: 'StreamLive в Max — ГЛАВНЫЕ ФАКТЫ ДНЯ | без воды и шума',
+    template: '%s | StreamLive в Max',
   },
   description:
-    'Ежедневная автоматическая сводка новостей StreamLive в Max: геополитика и СВО, технологии и импортозамещение, криптовалюты, безопасность и ЧП. Обновление 3 раза в день: утро, день, вечер.',
+    'Автоматический новостной дайджест StreamLive в Max: геополитика и СВО, StreamLife и технологии, криптовалюты, безопасность и ЧП. Три выпуска в день: 08:00, 14:00, 20:00 МСК. Только важные факты, без воды.',
   keywords: [
-    'новости дня', 'сводка новостей', 'StreamLive', 'геополитика', 'СВО новости',
-    'криптовалюты биткоин курс', 'технологии России', 'импортозамещение', 'ЧП сегодня',
+    'главные факты дня', 'новостной дайджест', 'StreamLive', 'Max',
+    'геополитика', 'СВО', 'технологии', 'криптовалюты', 'биткоин курс', 'ЧП сегодня', 'MCS',
   ],
   openGraph: {
     type: 'website',
-    siteName: SITE.brand,
+    siteName: 'StreamLive в Max',
     locale: 'ru_RU',
-    url: SITE.url,
-    title: `${SITE.name} — ${SITE.brand}`,
-    description: 'Только важные факты, без воды и информационного шума. 3 выпуска в день.',
-    images: [{ url: '/og.png', width: 1200, height: 630, alt: SITE.brand }],
+    url: SITE_URL,
+    title: 'StreamLive в Max — ГЛАВНЫЕ ФАКТЫ ДНЯ',
+    description: 'Фокус на главном, остальное — шум. Дайджест 3 раза в день: 08:00 / 14:00 / 20:00 МСК.',
+    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'StreamLive в Max' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${SITE.name} — ${SITE.brand}`,
-    description: 'Главные факты дня: геополитика, IT, крипта, ЧП.',
+    title: 'StreamLive в Max — ГЛАВНЫЕ ФАКТЫ ДНЯ',
+    description: 'Только важные факты, без воды и информационного шума.',
     images: ['/og.png'],
   },
   robots: {
     index: true,
     follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
   },
-  alternates: { canonical: SITE.url },
 };
 
-export const viewport = {
+export const viewport: Viewport = {
   themeColor: '#000000',
   width: 'device-width',
   initialScale: 1,
@@ -56,9 +51,9 @@ export const viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ru">
-      <body className="min-h-screen font-mono antialiased">
+      <body>
         <Header />
-        <main className="mx-auto w-full max-w-3xl px-3 pb-12 sm:px-4 sm:pb-16">{children}</main>
+        <main className="mx-auto w-full max-w-3xl px-3 pb-10 sm:px-4">{children}</main>
         <Footer />
       </body>
     </html>
@@ -67,42 +62,33 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 function Header() {
   return (
-    <header className="mx-auto mb-5 flex w-full max-w-3xl items-center justify-between gap-2 px-3 py-4 sm:mb-8 sm:px-4 sm:py-5">
-      <a href="/" className="flex shrink-0 items-baseline gap-1.5 no-underline sm:gap-2">
-        <span className="scanline-title text-lg font-bold tracking-tight text-neon-cyan sm:text-xl">
-          ⚡ StreamLive
-        </span>
-        <span className="text-xs text-neon-pink sm:text-sm">в Max</span>
+    <header
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+        maxWidth: 768,
+        margin: '0 auto',
+        padding: '14px 12px',
+      }}
+    >
+      <a href="/" aria-label="На главную StreamLive в Max">
+        <span style={{ fontWeight: 800, fontSize: 18, color: 'var(--cyan)' }}>⚡ StreamLive</span>
+        <span style={{ fontSize: 12, color: 'var(--pink)', marginLeft: 6 }}>в Max</span>
       </a>
-      <nav className="flex flex-wrap items-center justify-end gap-1.5 text-xs sm:gap-3 sm:text-sm">
-        <a href="/news" className="hidden text-gray-300 hover:text-neon-cyan sm:inline">Архив</a>
-        <a href="/news/today" className="rounded-md px-2 py-1.5 text-gray-300 hover:text-neon-cyan">Сегодня</a>
-        <a
-          href={SITE.telegram}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="min-h-[36px] rounded-md border border-neon-cyan/40 bg-neon-cyan/10 px-2.5 py-1.5 font-semibold text-neon-cyan hover:bg-neon-cyan/20 sm:px-3 sm:shadow-neon"
-          aria-label="Подписаться на Telegram-канал StreamLive в Max"
-        >
-          ✈️ <span className="hidden xs:inline sm:inline">TG</span>
+      <nav style={{ display: 'flex', gap: 8, fontSize: 13 }}>
+        <a href="/archive" className="sl-btn sl-btn--ghost" style={{ minHeight: 38, padding: '6px 12px' }}>
+          🗂 Архив
         </a>
         <a
-          href={SITE.max}
+          href="https://max.ru/channel_StreamLive"
           target="_blank"
           rel="noopener noreferrer"
-          className="min-h-[36px] rounded-md border border-neon-pink/40 bg-neon-pink/10 px-2.5 py-1.5 font-semibold text-neon-pink hover:bg-neon-pink/20 sm:px-3"
-          aria-label="Читать StreamLive в MAX"
+          className="sl-btn"
+          style={{ minHeight: 38, padding: '6px 12px' }}
         >
-          🟣 MAX
-        </a>
-        <a
-          href={SITE.vk}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hidden min-h-[36px] rounded-md border border-neon-blue/40 bg-neon-blue/10 px-2.5 py-1.5 font-semibold text-neon-blue hover:bg-neon-blue/20 sm:inline-block sm:px-3"
-          aria-label="Подписаться на StreamLive во ВКонтакте"
-        >
-          🔷 VK
+          🟣 Подписаться
         </a>
       </nav>
     </header>
@@ -111,52 +97,19 @@ function Header() {
 
 function Footer() {
   return (
-    <footer className="border-t border-line bg-panel/60">
-      <div className="mx-auto max-w-3xl px-4 py-8 text-xs leading-relaxed text-gray-500">
-        <p>
-          © {new Date().getFullYear()} {SITE.name}. Автоматическая редакция: RSS открытых
-          источников (Lenta.ru, ТАСС, РИА, Интерфакс, Коммерсантъ, РБК, Ведомости, Известия, МК,
-          3DNews, Habr, CNews, CoinDesk, Bits.media и др.) + живые курсы BTC (CoinGecko) и
-          USD/EUR/KZT/UAH. Публикации: 08:00, 14:00, 20:00 МСК. Архив с апреля 2026.
+    <footer style={{ borderTop: '1px solid var(--line)', marginTop: 24 }}>
+      <div className="mx-auto" style={{ maxWidth: 768, padding: '20px 16px' }}>
+        <p className="sl-muted">
+          © {new Date().getFullYear()} StreamLive в Max. Автоматическая редакция: RSS-источники
+          (Lenta.ru, РБК, CoinDesk, 3DNews) + живые курсы BTC. Выпуски: 08:00 / 14:00 / 20:00 МСК.
+          Архив накопительным итогом с апреля 2026 хранится в SQLite.
         </p>
-        <p className="mt-2">
-          <a href="/news" className="hover:text-neon-cyan">Архив</a> ·{' '}
-          <a href="/sitemap.xml" className="hover:text-neon-cyan">Sitemap</a> ·{' '}
-          <a href="/rss.xml" className="hover:text-neon-cyan">RSS</a>
-        </p>
-        {/* Блок подписки: три площадки StreamLive в Max */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <a
-            href={SITE.telegram}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md border border-neon-cyan/40 bg-neon-cyan/10 px-3 py-1.5 text-sm font-semibold text-neon-cyan hover:bg-neon-cyan/20"
-          >
-            ✈️ Подписаться в Telegram — t.me/streamliveru
+        <p style={{ marginTop: 10, fontSize: 13 }}>
+          <a href="/" style={{ color: 'var(--cyan)', marginRight: 14 }}>Главная</a>
+          <a href="/archive" style={{ color: 'var(--cyan)', marginRight: 14 }}>Архив</a>
+          <a href="https://max.ru/channel_StreamLive" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--pink)' }}>
+            MAX-канал
           </a>
-          <a
-            href={SITE.max}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md border border-neon-pink/40 bg-neon-pink/10 px-3 py-1.5 text-sm font-semibold text-neon-pink hover:bg-neon-pink/20"
-          >
-            🟣 Читать в MAX — max.ru/channel_StreamLive
-          </a>
-          <a
-            href={SITE.vk}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md border border-neon-blue/40 bg-neon-blue/10 px-3 py-1.5 text-sm font-semibold text-neon-blue hover:bg-neon-blue/20"
-          >
-            🔷 Подписаться во VK — vk.com/streamliveru
-          </a>
-        </div>
-        <p className="mt-3 text-gray-400">
-          👉 Получайте «ГЛАВНЫЕ ФАКТЫ ДНЯ» 3 раза в день: подпишитесь на{' '}
-          <a href={SITE.telegram} target="_blank" rel="noopener noreferrer" className="text-neon-cyan hover:underline">Telegram</a>,{' '}
-          <a href={SITE.max} target="_blank" rel="noopener noreferrer" className="text-neon-pink hover:underline">MAX</a>{' '}
-          или <a href={SITE.vk} target="_blank" rel="noopener noreferrer" className="text-neon-blue hover:underline">ВКонтакте</a> —
-          без воды и информационного шума.
         </p>
       </div>
     </footer>

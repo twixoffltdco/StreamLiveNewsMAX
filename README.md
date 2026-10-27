@@ -1,128 +1,132 @@
-# ⚡ StreamLive Daily — «StreamLive в Max»
+# ⚡ StreamLive в Max — автоматизированные новостные дайджесты
 
-**Автоматизированный новостной дайджест на Next.js 14 (App Router).** Каждый день в **08:00, 14:00 и 20:00 МСК** сайт сам парсит RSS открытых источников, собирает сводку «ГЛАВНЫЕ ФАКТЫ ДНЯ» в строгом шаблоне без воды, публикует SEO-страницу `/news/[ДД-ММММ-ГГГГ]`, обновляет `sitemap.xml` и пингует Яндекс/Google для мгновенной индексации.
+Полностью автономная система «ГЛАВНЫЕ ФАКТЫ ДНЯ» на **Next.js 14 (App Router)**.
+Схема работы: **RSS → защищённый API-роут → внешний cron → SQLite → сайт**.
 
-[![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-![Next.js 14](https://img.shields.io/badge/Next.js-14%20App%20Router-black?logo=nextdotjs)
-![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-zoomer%20dark-06B6D4?logo=tailwindcss)
-![RSS-parser](https://img.shields.io/badge/RSS-real%20feeds-orange)
+**Никаких GitHub Actions.** Всё крутится на сервере само: приложение отдаёт роут,
+внешний планировщик дергает его по расписанию, данные копятся в лёгкой базе SQLite
+(накопительный итог с апреля 2026, не теряется при перезагрузке/ребилде).
 
-> 🏆 **5 из 5**: production-ready код · автопубликация по cron · полный SEO (sitemap, OG, Schema.org NewsArticle, RSS) · fallback при падении источников · MIT-лицензия и README.
+```
+[cron-job.org / Vercel Cron] --GET 08:00/14:00/20:00 МСК--> /api/cron/generate-digest?secret=…
+        │                                                        │
+        │                                              rss-parser (Lenta.ru, РБК, CoinDesk, 3DNews
+        │                                              + запасные источники при падении основного)
+        │                                                        │
+        │                                              saveDigest() → SQLite data/streamlive.db
+        ▼                                                        ▼
+   { "success": true, "date": "YYYY-MM-DD" }            / , /archive , /digest/[date]
+```
 
 ---
 
-## ✨ Возможности
-
-| | |
-|---|---|
-| 🤖 **Автогенерация** | Реальный парсинг RSS (Lenta.ru, ТАСС, РИА, Интерфакс, Коммерсантъ, Газета.Ru, 3DNews, Habr, CryptoPotato, CoinDesk) + живой курс BTC с CoinGecko. Никаких мок-данных. |
-| 📌 **Строгий шаблон** | Текст каждой сводки следует фирменному формату «StreamLive в Max»: эмодзи-рубрики, тире-факты, мотивирующий вступ, финальная строка. |
-| ⏰ **Cron 3×/день** | Vercel Cron (`vercel.json`) или node-cron демон (`npm run cron`): 08:00 / 14:00 / 20:00 МСК. |
-| 🔍 **SEO-архитектура** | SSG-страницы дат, `next-sitemap` (+авто-регенерация после каждого выпуска), canonical, OpenGraph/VK/Telegram-превью, Twitter Cards, JSON-LD `NewsArticle`, собственный `rss.xml`, кластерная перелинковка. |
-| 🛟 **Отказоустойчивость** | Упал один фид — остальные вытянули; упали все — страница показывает вчерашнюю сводку с плашкой ⚠️. |
-| 🎛 **«Движи»** | Рубрики вынесены в конфиг: сегодня движ — СВО, завтра меняете `ACTIVE_MOVES=economy,tech,crypto,incidents` в `.env` — и сайт перестраивается без правки кода. Кнопки «🔎 Важное: СВО / IT / Крипта / ЧП / Экономика» ведут на страницы рубрик `/category/*`. |
-| 🎨 **Zoomer 2026 UI** | Чистый чёрный `#000000`, неон cyan/pink, моноширинный «терминальный» стиль — но крупно, контрастно и понятно **всем возрастам**. |
-| ✈️ **Подписка** | Три CTA-кнопки на каждой странице: [t.me/streamliveru](https://t.me/streamliveru), [max.ru/channel_StreamLive](https://max.ru/channel_StreamLive), [vk.com/streamliveru](https://vk.com/streamliveru) — шапка, подвал, карточка выпуска, архив и рубрики. |
-
-## 🚀 Быстрый старт
+## 1. Установка и запуск
 
 ```bash
-git clone <your-repo> streamlive-daily && cd streamlive-daily
-cp .env.example .env.local       # заполните NEXT_PUBLIC_SITE_URL и CRON_SECRET
+# 1. Зависимости (next, react, react-dom, rss-parser, better-sqlite3, date-fns)
 npm install
 
-npm run generate                 # собрать первый выпуск из реальных RSS
-npm run dev                      # http://localhost:3000
+# 2. Настройте окружение
+cp .env.example .env.local
+#   CRON_SECRET=<длинная случайная строка, напр. openssl rand -hex 32>
+#   NEXT_PUBLIC_SITE_URL=https://твой-домен.ru
+#   DATABASE_PATH=                      # по умолчанию ./data/streamlive.db
+
+# 3. (Необязательно) первичное наполнение архива сегодняшним выпуском
+npx tsx scripts/seed.ts
+
+# 4. Запуск
+npm run build && npm start       # прод: http://localhost:3000
+# или для разработки: npm run dev
 ```
 
-Продакшен:
+Проверка роута вручную:
 
 ```bash
-npm run build                    # генерация → next build → next-sitemap
-npm start                        # self-hosted
-# ИЛИ деплой на Vercel: crons из vercel.json работают автоматически
+curl "http://localhost:3000/api/cron/generate-digest?secret=$CRON_SECRET"
+# {"success":true,"date":"2026-10-28"}
+
+curl "http://localhost:3000/api/cron/generate-digest?secret=wrong"
+# 401 {"success":false,"error":"Unauthorized: invalid or missing secret"}
 ```
 
-## 🗓 Как работает автоматизация
+## 2. Структура проекта
 
+| Файл | Назначение |
+|---|---|
+| `lib/db.ts` | SQLite (`better-sqlite3`): таблица `digests (id, date UNIQUE, title, intro, sections_json, outro, created_at)` + `saveDigest / getLatestDigest / getAllDigests / getDigestByDate`. UPSERT по дате — три cron-вызова в день обновляют один выпуск, дублей нет. |
+| `lib/digest-generator.ts` | RSS-парсинг: топ-2 новости на рубрику, каскад запасных источников, живой курс BTC, жёсткая строка про `domtv.blyz.ru` в разделе IT. |
+| `app/api/cron/generate-digest/route.ts` | Защищённый GET/POST-роут (`CRON_SECRET`), возвращает `{ success: true, date }`. |
+| `app/page.tsx` | Главная: последний выпуск из БД, Zoomer 2026 UI (#000 / #00f2ea / #fe2c55). |
+| `app/archive/page.tsx` | Архив: все выпуски с апреля 2026, от новых к старым. |
+| `app/digest/[date]/page.tsx` | Выпуск за дату: SEO meta / OG / canonical / JSON-LD NewsArticle. |
+| `scripts/seed.ts` | Ручной генератор выпуска (первый деплой / долив истории). |
+
+## 3. Автозапуск: cron-job.org (бесплатно, 5 минут)
+
+1. Зарегистрируйтесь на **https://cron-job.org** (email + пароль, бесплатно).
+2. Нажмите **«Create Cronjob»**.
+3. Заполните:
+   - **Title:** `StreamLive digest`
+   - **URL:** `https://твой-домен.ru/api/cron/generate-digest?secret=ТВОЙ_СЕКРЕТ`
+     (значение `secret` = ваш `CRON_SECRET` из `.env`)
+   - **Access Authorization:** *не* включать — секрет уже в URL.
+4. **Schedule → On the hour / Express:** укажите три времени (выберите **Europe/Moscow**):
+   ```
+   0 8,14,20 * * *
+   ```
+   Это 08:00, 14:00 и 20:00 МСК каждый день.
+5. Включите **«Execute even if the previous execution failed»** и сохраните.
+6. Проверьте: кнопка **Run now** → в логе должен быть `HTTP 200` и тело
+   `{"success":true,"date":"YYYY-MM-DD"}`. Выпуск появится на сайте мгновенно.
+
+### Вариант: Vercel Cron (если хостинг Vercel)
+
+Файл `vercel.json`:
+
+```json
+{
+  "crons": [
+    { "path": "/api/cron/generate-digest?secret=ТВОЙ_СЕКРЕТ", "schedule": "0 5,11,17 * * *" }
+  ]
+}
 ```
-Vercel Cron / node-cron / GitHub Actions   (05:00, 11:00, 17:00 UTC = 08/14/20 МСК)
-        │
-        ▼
-GET /api/cron/update-news  (Bearer CRON_SECRET)
-        ├─▶ scripts/generate-digest.js — парсинг RSS → классификация → шаблон
-        │        └─▶ content/news/YYYY-MM-DD.md + .json
-        ├─▶ next-sitemap — новые страницы моментально в sitemap.xml
-        └─▶ ping Яндекса (Webmaster API) и Google (sitemap ping) → быстрая индексация
+
+(Vercel Cron хранит время в UTC: 05/11/17 UTC = 08/14/20 МСК.)
+⚠️ На serverless-платформах файловая система эфемерна — пробросьте персистентность диска:
+используйте **Vercel Fluid Compute + Serverless Persistence** и задайте
+`DATABASE_PATH=/mnt/data/streamlive.db`, либо вынесите SQLite на маленький VPS/Tatnet.
+
+### Вариант: системный crontab (VPS / Tatnet)
+
+```cron
+0 8,14,20 * * * curl -s "https://твой-домен.ru/api/cron/generate-digest?secret=ТВОЙ_СЕКРЕТ" >> /var/log/streamlive-cron.log 2>&1
 ```
 
-* Self-hosted альтернатива: `npm run cron` (node-cron демон).
-* На Vercel секрет `CRON_SECRET` подставляется в заголовок `Authorization: Bearer …` автоматически.
+## 4. Graceful degradation
 
-## 📂 Структура проекта
+- Каждая рубрика читается из списка фидов: упал Lenta → РИА → ТАСС; упал 3DNews → Habr → CNews;
+  упал CoinDesk → Bits.media → Cryptonews; упала Газета.ру → M24 → Life.
+- Все RSS рубрики недоступны? Вставка дежурного факта — **скрипт не падает**, cron получает 200.
+- Курс BTC: CoinGecko → CoinCap → нейтральная строка.
+- Повторный вызов в тот же день — UPDATE, а не дубль (UNIQUE по `date`).
 
-```
-app/
-├── page.tsx                     # главная: свежий выпуск + кнопки «движей»
-├── layout.tsx                   # глобальные мета-теги, OG, header/footer
-├── news/
-│   ├── page.tsx                 # архив выпусков (SEO-хаб)
-│   ├── today/page.tsx           # канонический «сегодня» (force-dynamic)
-│   └── [date]/page.tsx          # Динамическая SEO-страница 26-10-2026 + JSON-LD
-├── category/[slug]/page.tsx     # страницы рубрик (СВО, IT, крипта, ЧП, экономика)
-├── api/cron/update-news/route.ts# cron-роут: генерация + sitemap + пинги
-└── rss.xml/route.ts             # собственный RSS дайджестов
-lib/
-├── config.ts                    # RSS-ленты, категории-«движи», SITE
-├── news-generator.ts            # парсинг → классификация → суммаризация → шаблон
-├── storage.ts                   # файловая база content/news/*.md|*.json
-└── dates.ts                     # формат дат ДД-ММММ-ГГГГ (МСК)
-components/DigestView.tsx        # Zoomer-UI карточек рубрик + кнопка Telegram
-scripts/
-├── generate-digest.js           # standalone-генератор (build, CI, cron)
-└── cron-daemon.js               # node-cron демон для VPS
-content/news/                    # опубликованные сводки (MD + JSON)
-next-sitemap.config.js           # sitemap.xml + robots.txt (авто-обновление)
-vercel.json                      # Vercel Cron: 08/14/20 МСК
+## 5. Бэкап данных
+
+```bash
+sqlite3 data/streamlive.db ".backup 'backups/streamlive-$(date +%F).db'"
+# или дамп текстом:
+sqlite3 data/streamlive.db .dump > backup.sql
 ```
 
-## 🔧 Переменные окружения (`.env.local`)
+## 6. Переменные окружения
 
-| Переменная | Обязательная | Описание |
+| Переменная | Обязательно | Описание |
 |---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | ✅ | Абсолютный URL — для sitemap, canonical, OG |
-| `CRON_SECRET` | ✅ | Защита `/api/cron/update-news` |
-| `NEXT_PUBLIC_TELEGRAM_URL` | https://t.me/streamliveru | Telegram-канал «StreamLive в Max» |
-| `NEXT_PUBLIC_MAX_URL` | https://max.ru/channel_StreamLive | Канал в национальном мессенджере MAX |
-| `NEXT_PUBLIC_VK_URL` | https://vk.com/streamliveru | Группа ВКонтакте |
-| `ACTIVE_MOVES` | — | Состав движков: `geopolitics,tech,crypto,incidents[,economy,sport]` |
-| `OPENAI_API_KEY` / `GIGACHAT_API_KEY` | — | Хук рерайта фактов LLM в фирменный стиль (без ключа — эвристический суммаризатор) |
-| `YANDEX_WEBMASTER_TOKEN` | — | Мгновенный переобход sitemap в Яндексе |
+| `CRON_SECRET` | ✅ | Токен доступа к `/api/cron/generate-digest`. Без него роут отвечает 401 (fail-closed). |
+| `DATABASE_PATH` | — | Путь к SQLite-файлу. По умолчанию `./data/streamlive.db`. |
+| `NEXT_PUBLIC_SITE_URL` | — | Базовый URL для canonical/OG/JSON-LD. |
 
-## 🔍 SEO-чеклист (что уже сделано)
+---
 
-- [x] SSG-страницы `/news/DD-MM-YYYY` + `generateStaticParams`
-- [x] `next-sitemap`: robots.txt, lastmod, changefreq=`always` для свежих страниц
-- [x] Title/Description/Canonical уникальны для каждого выпуска
-- [x] OpenGraph `type=article` + картинка `/public/og.png` (1200×630) — красивые превью в Telegram/VK
-- [x] Schema.org **NewsArticle** (JSON-LD) — datePublished/dateModified, publisher, about
-- [x] Собственный RSS-фид `/rss.xml` + `googleNews.indexable`
-- [x] Пинг поисковых систем после каждого cron-выпуска
-- [x] Кластерная перелинковка: день↔день, архив, рубрики
-- ⚠️ Замените домен-заглушку `streamlive.app` на боевой и подтвердите его в Яндекс.Вебмастере и Search Console.
-
-## 🧪 Проверено
-
-```bash
-$ npm run generate
-[cron] digest 27-10-2026 published: 4 sections, 11 facts   # реальные новости
-$ curl -s localhost:3000/api/cron/update-news -H "Authorization: Bearer $CRON_SECRET"
-{"ok":true,"pings":["yandex:skipped(no-token)","google:200"]}
-```
-
-Fallback проверен: запрос даты без файла отдаёт предыдущую сводку с плашкой «показана последняя сводка».
-
-## 📄 Лицензия
-
-[MIT](LICENSE) © 2026 StreamLive Daily contributors
+© StreamLive в Max — только важные факты, без воды и информационного шума.

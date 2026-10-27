@@ -1,19 +1,20 @@
 {
-  "name": "streamlive-daily",
-  "version": "1.0.0",
+  "name": "streamlive-max",
+  "version": "2.0.0",
   "private": true,
-  "description": "StreamLive Daily — автоматизированный новостной дайджест на Next.js 14 (App Router) с RSS-парсингом, cron-публикацией и SEO-оптимизацией под Яндекс и Google.",
+  "description": "StreamLive в Max — полностью автоматизированная система новостных дайджестов на Next.js 14 (App Router). RSS + внешний cron + SQLite. Без GitHub Actions.",
   "license": "MIT",
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/generate-digest.js --quiet || true; next build && next-sitemap",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "cron": "node scripts/cron-daemon.js",
-    "generate": "node scripts/generate-digest.js",
-    "postbuild": "next-sitemap"
+    "seed": "npx tsx scripts/seed.ts"
   },
   "dependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "better-sqlite3": "^12.11.1",
+    "date-fns": "^4.4.0",
     "next": "^14.2.35",
     "next-sitemap": "^4.2.3",
     "node-cron": "^3.0.3",
