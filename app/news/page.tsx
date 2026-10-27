@@ -6,6 +6,9 @@ import type { Metadata } from 'next';
 
 export const revalidate = 3600;
 
+/** Нижняя граница архива: выпуски раньше этой даты не показываем. */
+const ARCHIVE_FROM_ISO = '2026-04-01';
+
 export const metadata: Metadata = {
   title: 'Архив сводок StreamLive в Max — все выпуски по дням',
   description:
