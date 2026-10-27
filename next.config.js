@@ -2,8 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  // Страницы новостей рендерятся статически в момент генерации (SSG) —
-  // это максимально быстро и понятно для роботов Яндекса и Google.
+  // better-sqlite3 — нативный модуль: не бандлим его на сервере.
+  serverExternalPackages: ['better-sqlite3'],
   async headers() {
     return [
       {

@@ -1,75 +1,235 @@
+/**
+ * app/globals.css — Zoomer 2026 UI «StreamLive в Max».
+ * Строгий dark-режим: чистый чёрный #000000, акценты #00f2ea / #fe2c55,
+ * mobile-first, моноширинная «терминальная» типографика.
+ */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Zoomer-терминал: чёрный фон, тонкая неоновая сетка, крупный читаемый текст.
-   На мобилках эффекты облегчены — меньше лагов и battery drain. */
+:root {
+  --bg: #000000;
+  --panel: #0a0a0c;
+  --line: #1d1d24;
+  --cyan: #00f2ea;   /* акцент TikTok-cyan */
+  --pink: #fe2c55;   /* акцент TikTok-pink */
+  --text: #e7e7ea;
+  --muted: #8b8b93;
+}
+
 html {
+  background: var(--bg);
   color-scheme: dark;
-  scroll-behavior: smooth;
-  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background-color: #000000;
-  color: #e8e8ee;
-  /* Сетка только на desktop — на мобиле рисуется дорого и лагает */
-  background-image: none;
-}
-
-@media (min-width: 640px) {
-  body {
-    background-image:
-      linear-gradient(rgba(0, 229, 255, 0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 45, 120, 0.028) 1px, transparent 1px);
-    background-size: 44px 44px;
-  }
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 420px at 85% -10%, rgba(254, 44, 85, 0.07), transparent 60%),
+    radial-gradient(760px 380px at 0% 0%, rgba(0, 242, 234, 0.06), transparent 55%),
+    var(--bg);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.55;
 }
 
 ::selection {
-  background: rgba(0, 229, 255, 0.35);
+  background: var(--pink);
   color: #fff;
 }
 
-.neon-frame {
-  border: 1px solid #1d1d24;
-  /* На мобиле лёгкая тень, без больших blur */
-  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.04);
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ---------- Карточка с неоновой рамкой ---------- */
+.sl-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 40%), var(--panel);
+  padding: 16px;
 }
 
 @media (min-width: 640px) {
-  .neon-frame {
-    box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.06), 0 0 24px rgba(0, 229, 255, 0.07);
-  }
+  .sl-card { padding: 20px; }
 }
 
-.scanline-title {
-  /* На мобиле без тяжёлых text-shadow — меньше перерисовки */
-  text-shadow: none;
+.sl-card--glow {
+  box-shadow: 0 0 14px rgba(0, 242, 234, 0.14), 0 0 36px rgba(254, 44, 85, 0.08);
+}
+
+/* ---------- Заголовки со «сканлайном» ---------- */
+.sl-title {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.sl-title-accent {
+  color: var(--cyan);
+  text-shadow: 0 0 18px rgba(0, 242, 234, 0.45);
+}
+
+/* ---------- Рубрика ---------- */
+.sl-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--cyan);
+  margin-bottom: 12px;
+}
+
+.sl-section-icon {
+  font-size: 22px;
+  filter: drop-shadow(0 0 8px rgba(0, 242, 234, 0.5));
+}
+
+/* ---------- Факт-строка ---------- */
+.sl-item {
+  position: relative;
+  border-left: 2px solid var(--line);
+  padding: 2px 0 2px 12px;
+  margin-bottom: 10px;
+  font-size: 14.5px;
+  color: var(--text);
+  transition: border-color 0.15s ease;
+}
+
+.sl-item:hover { border-left-color: var(--pink); }
+
+.sl-item::before {
+  content: '—';
+  position: absolute;
+  left: -0px;
+  transform: translateX(-14px);
+  color: var(--pink);
+  opacity: 0;
 }
 
 @media (min-width: 640px) {
-  .scanline-title {
-    text-shadow: 0 0 10px rgba(0, 229, 255, 0.55), 0 0 30px rgba(255, 45, 120, 0.25);
-  }
+  .sl-item { font-size: 15.5px; }
 }
 
-/* Крупные тач-зоны на мобиле */
-@media (max-width: 639px) {
-  a, button {
-    min-height: 44px;
-  }
-  .neon-frame {
-    padding: 1rem !important;
-  }
+/* domtv-строка подсвечивается фирменным градиентом */
+.sl-item--pinned {
+  border-left-color: var(--cyan);
+  background: linear-gradient(90deg, rgba(0, 242, 234, 0.08), transparent 70%);
+  border-radius: 0 8px 8px 0;
+  padding-top: 6px;
+  padding-bottom: 6px;
 }
 
-/* Плавный скролл без jank */
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-  .scanline-title {
-    text-shadow: none !important;
+/* ---------- Кнопки ---------- */
+.sl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 14px;
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  background: rgba(0, 242, 234, 0.08);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.sl-btn:hover {
+  background: rgba(0, 242, 234, 0.18);
+  box-shadow: 0 0 16px rgba(0, 242, 234, 0.35);
+}
+
+.sl-btn--pink {
+  border-color: var(--pink);
+  color: var(--pink);
+  background: rgba(254, 44, 85, 0.08);
+}
+
+.sl-btn--pink:hover {
+  background: rgba(254, 44, 85, 0.18);
+  box-shadow: 0 0 16px rgba(254, 44, 85, 0.35);
+}
+
+.sl-btn--ghost {
+  border-color: var(--line);
+  color: var(--muted);
+  background: transparent;
+}
+
+.sl-btn--ghost:hover {
+  color: var(--cyan);
+  border-color: var(--cyan);
+  box-shadow: none;
+}
+
+/* ---------- Бейдж LIVE ---------- */
+.sl-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--pink);
+}
+
+.sl-live::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pink);
+  animation: sl-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes sl-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(254, 44, 85, 0.5); }
+  50% { opacity: 0.55; box-shadow: 0 0 0 6px rgba(254, 44, 85, 0); }
+}
+
+/* ---------- Пунктирный разделитель ---------- */
+.sl-divider {
+  border: 0;
+  border-top: 1px dashed var(--line);
+  margin: 14px 0;
+}
+
+/* ---------- Список архива ---------- */
+.sl-archive-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.sl-archive-row:hover {
+  border-color: var(--cyan);
+  transform: translateY(-1px);
+}
+
+/* ---------- Мелкий приглушённый текст ---------- */
+.sl-muted { color: var(--muted); font-size: 12.5px; }
+
+/* ---------- Grid-раскладка секций на широких экранах ---------- */
+@media (min-width: 900px) {
+  .sl-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
   }
 }
