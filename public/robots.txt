@@ -4,7 +4,7 @@ Allow: /
 Disallow: /api/
 
 # Host
-Host: https://streamlive.app
+Host: https://streamlive.tatnet.app
 
 # Sitemaps
-Sitemap: https://streamlive.app/sitemap.xml
+Sitemap: https://streamlive.tatnet.app/sitemap.xml
