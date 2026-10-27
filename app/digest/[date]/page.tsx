@@ -62,7 +62,14 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default function DigestPage({ params }: Params) {
-  const digest = getDigestByDate(params.date);
+  // Защита от 500: любые проблемы с БД → аккуратный 404, а не «Application error».
+  let digest;
+  try {
+    digest = getDigestByDate(params.date);
+  } catch (e) {
+    console.error('[digest] getDigestByDate failed:', e);
+    notFound();
+  }
   if (!digest) notFound();
 
   // JSON-LD для поисковиков: каждый выпуск — отдельная Article.

@@ -3,7 +3,7 @@ import type { DigestRow } from '@/lib/db';
 /**
  * components/DigestView.tsx — рендер выпуска по шаблону ТЗ.
  * Строгий Zoomer-UI: карточка на рубрику, неоновая иконка, каждый факт — строкой.
- * domtv-строка подсвечивается как закреплённая (pinned).
+ * Редкая тематическая строка про сервисы (domtv/streamlivetv) подсвечивается как закреплённая (pinned).
  */
 
 export function DigestView({ digest }: { digest: DigestRow }) {

@@ -18,7 +18,15 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  const digest = getLatestDigest();
+  // Защита от 500: если БД недоступна (bit-safe на serverless), показываем
+  // заглушку вместо «Application error: a server-side exception has occurred».
+  let digest;
+  try {
+    digest = getLatestDigest();
+  } catch (e) {
+    console.error('[page] getLatestDigest failed:', e);
+    digest = null;
+  }
 
   if (!digest) {
     return (

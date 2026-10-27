@@ -9,7 +9,8 @@
  *   1. Проверяем токен process.env.CRON_SECRET (401 при ошибке).
  *   2. rss-parser тянет топ-2 новости на каждую рубрику из Lenta/RBC/CoinDesk/3DNews
  *      с каскадом запасных источников (graceful degradation).
- *   3. Строка про domtv.blyz.ru жёстко внедряется в раздел IT.
+ *   3. Строка про domtv.blyz.ru / streamlivetv.freedev.app внедряется в раздел IT
+ *      НЕ ежедневно: только при реальной новости про стриминг/IPTV и не чаще раза в неделю.
  *   4. Выпуск сохраняется в SQLite (lib/db.ts) накопительным итогом.
  *   5. Ответ: { success: true, date: "YYYY-MM-DD" }.
  *

@@ -55,7 +55,7 @@ curl "http://localhost:3000/api/cron/generate-digest?secret=wrong"
 | Файл | Назначение |
 |---|---|
 | `lib/db.ts` | SQLite (`better-sqlite3`): таблица `digests (id, date UNIQUE, title, intro, sections_json, outro, created_at)` + `saveDigest / getLatestDigest / getAllDigests / getDigestByDate`. UPSERT по дате — три cron-вызова в день обновляют один выпуск, дублей нет. |
-| `lib/digest-generator.ts` | RSS-парсинг: топ-2 новости на рубрику, каскад запасных источников, живой курс BTC, жёсткая строка про `domtv.blyz.ru` в разделе IT. |
+| `lib/digest-generator.ts` | RSS-парсинг: топ-2 новости на рубрику, каскад запасных источников, живой курс BTC. Строка про `domtv.blyz.ru` / `streamlivetv.freedev.app` — НЕ ежедневно: только при реальной новости про стриминг/IPTV и не чаще раза в неделю, формулировка строго по факту. |
 | `app/api/cron/generate-digest/route.ts` | Защищённый GET/POST-роут (`CRON_SECRET`), возвращает `{ success: true, date }`. |
 | `app/page.tsx` | Главная: последний выпуск из БД, Zoomer 2026 UI (#000 / #00f2ea / #fe2c55). |
 | `app/archive/page.tsx` | Архив: все выпуски с апреля 2026, от новых к старым. |
